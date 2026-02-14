@@ -1,0 +1,42 @@
+syntax = "proto3";
+
+package yunhu_user;
+
+// 用户登录请求
+message email_login_request {
+    string email = 1;
+    string password = 2;
+    string deviceId = 3;
+    string platform = 4;
+}
+
+// 用户登录响应
+message email_login_response {
+    Status status = 1;
+    Data data = 2;
+    
+    message Status {
+        int32 code = 1;
+        string msg = 2;
+    }
+    
+    message Data {
+        string token = 1;
+    }
+}
+
+// 用户信息响应
+message user_info_response {
+    Status status = 1;
+    Data data = 2;
+    
+    message Status {
+        int32 code = 1;
+    }
+    
+    message Data {
+        string id = 1;
+        string name = 2;
+        string avatar_url = 4;
+    }
+}

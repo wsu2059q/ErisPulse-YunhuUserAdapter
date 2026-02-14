@@ -1,0 +1,29 @@
+[YunhuUserAdapter]
+# WebSocket重连间隔（秒）
+ws_reconnect_interval = 30
+
+# WebSocket超时时间（秒）
+ws_timeout = 70
+
+# 用户账户配置示例
+[YunhuUserAdapter.accounts.default]
+# 用户邮箱（必填）
+email = "your_email@example.com"
+# 用户密码（必填）
+password = "your_password"
+# 登录平台（可选，默认windows）
+# 可选值: windows, macos, linux, ios, android
+platform = "windows"
+# 设备ID（可选，不填自动生成）
+# 建议填写固定值以保持会话一致性
+device_id = ""
+# 是否启用该账户
+enabled = true
+
+# 第二个账户配置示例（可选）
+# [YunhuUserAdapter.accounts.account2]
+# email = "another_email@example.com"
+# password = "another_password"
+# platform = "android"
+# device_id = "fixed_device_id_2"
+# enabled = true

@@ -1,0 +1,27 @@
+[project]
+name = "ErisPulse-YunhuUserAdapter"
+version = "1.0.0"
+description = "云湖用户账户驱动适配器，支持通过用户账号与云湖平台交互"
+readme = "README.md"
+requires-python = ">=3.10"
+authors = [
+    { name = "wsu2059", email = "wsu2059@qq.com" }
+]
+
+dependencies = [
+    "aiohttp",
+    "protobuf>=6.31.1",
+    "websockets>=15.0.1",
+    "mutagen>=1.47.0",
+    "filetype>=1.2.0",
+]
+
+[project.entry-points]
+"erispulse.adapter" = { "yunhu_user" = "YunhuUserAdapter:YunhuUserAdapter" }
+
+[tool.setuptools.packages.find]
+include = ["YunhuUserAdapter"]
+
+[build-system]
+requires = ["setuptools>=61.0", "wheel"]
+build-backend = "setuptools.build_meta"
