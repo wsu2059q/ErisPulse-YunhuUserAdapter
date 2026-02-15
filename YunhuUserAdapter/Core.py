@@ -216,6 +216,34 @@ class YunhuUserAdapter(BaseAdapter):
             if http_client and account_name not in self._http_clients:
                 await http_client.close()
     
+    async def _handle_ws_event(self, ws_event: Dict[str, Any], account_name: str, account: Dict[str, Any]) -> None:
+        """
+        处理 WebSocket 事件
+        
+        :param ws_event: WebSocket 原始事件
+        :param account_name: 账户名称
+        :param account: 账户信息
+        """
+        try:
+            # 转换事件为 OneBot12 格式
+            ob12_event = self.converter.convert(ws_event)
+            
+            if ob12_event:
+                self.logger.debug(f"ob12 事件: {ob12_event}")
+                # 填充当前登录用户的 ID
+                ob12_event["self"]["user_id"] = account["user_id"]
+                
+                # 提交事件到适配器系统
+                if self.adapter:
+                    await self.adapter.emit(ob12_event)
+                else:
+                    self.logger.warning(f"未设置 adapter，无法提交事件: {ob12_event.get('type')}")
+        
+        except Exception as e:
+            self.logger.error(f"账户 {account_name} 处理 WebSocket 事件失败: {e}")
+            import traceback
+            self.logger.debug(traceback.format_exc())
+    
     async def _ws_listener(self, account_name: str, account: Dict[str, Any]) -> None:
         """
         WebSocket 事件监听器
@@ -251,19 +279,9 @@ class YunhuUserAdapter(BaseAdapter):
                     if not self._running:
                         break
                     
-                    # 转换事件为 OneBot12 格式
-                    ob12_event = self.converter.convert(ws_event)
-                    
-                    if ob12_event:
-                        self.logger.debug(f"ob12 事件: {ob12_event}")
-                        # 填充当前登录用户的 ID
-                        ob12_event["self"]["user_id"] = account["user_id"]
-                        
-                        # 提交事件到适配器系统
-                        if self.adapter:
-                            await self.adapter.emit(ob12_event)
-                        else:
-                            self.logger.warning(f"未设置 adapter，无法提交事件: {ob12_event.get('type')}")
+                    asyncio.create_task(
+                        self._handle_ws_event(ws_event, account_name, account)
+                    )
                 
                 # 正常退出循环
                 break
