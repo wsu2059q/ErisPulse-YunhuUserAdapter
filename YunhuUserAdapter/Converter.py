@@ -28,8 +28,9 @@ class YunhuUserConverter:
             return self._convert_file_send_message(ws_event)
         elif cmd == "bot_board_message":
             return self._convert_bot_board_message(ws_event)
-        elif cmd == "stream_message":
-            return self._convert_stream_message(ws_event)
+        # 暂时注释掉流式消息处理（stream_message），因为频繁发送造成困扰
+        # elif cmd == "stream_message":
+        #     return self._convert_stream_message(ws_event)
         # draft_input 暂不处理（非必要功能）
         else:
             # 不支持的事件类型
