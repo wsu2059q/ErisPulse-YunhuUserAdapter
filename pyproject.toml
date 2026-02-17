@@ -20,7 +20,7 @@ dependencies = [
 "erispulse.adapter" = { "yunhu_user" = "YunhuUserAdapter:YunhuUserAdapter" }
 
 [tool.setuptools.packages.find]
-include = ["YunhuUserAdapter"]
+include = ["YunhuUserAdapter*"]
 
 [build-system]
 requires = ["setuptools>=61.0", "wheel"]
