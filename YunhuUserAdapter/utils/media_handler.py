@@ -7,8 +7,9 @@ class MediaHandler:
     """媒体文件处理器
     
     提供统一的媒体文件处理接口：
-    - 自动判断 URL/二进制
-    - 自动下载文件
+    - 自动判断 URL/二进制/本地路径
+    - 自动下载文件（如果是URL）
+    - 自动读取本地文件（如果是路径）
     - 自动上传到七牛云
     - 获取音频时长
     """
@@ -30,9 +31,9 @@ class MediaHandler:
         filename: Optional[str] = None
     ) -> Optional[Dict[str, any]]:
         """
-        处理文件：自动判断 URL/二进制，下载（如需），上传到七牛云
+        处理文件：自动判断 URL/本地路径/二进制，下载或读取（如需），上传到七牛云
         
-        :param file: 文件 URL 或二进制数据
+        :param file: 文件 URL、本地文件路径或二进制数据
         :param file_type: 文件类型
         :param filename: 文件名（可选）
         :return: 包含 key 和元数据的字典，失败返回 None
@@ -52,7 +53,27 @@ class MediaHandler:
                 if not filename:
                     import os
                     filename = os.path.basename(file).split("?")[0]
-                    
+            
+            # 本地文件路径 - 读取文件
+            elif isinstance(file, str):
+                try:
+                    import os
+                    if os.path.isfile(file):
+                        # 从路径中提取文件名
+                        if not filename:
+                            filename = os.path.basename(file)
+                        
+                        # 读取文件内容
+                        with open(file, "rb") as f:
+                            file_data = f.read()
+                        self.logger.debug(f"成功读取本地文件: {file}, 大小: {len(file_data)} 字节")
+                    else:
+                        self.logger.error(f"文件不存在或不是有效路径: {file}")
+                        return None
+                except Exception as e:
+                    self.logger.error(f"读取本地文件失败: {file}, 错误: {e}")
+                    return None
+            
             # 二进制方式 - 直接使用
             elif isinstance(file, bytes):
                 file_data = file

@@ -81,9 +81,19 @@ class YunhuUserAdapter(BaseAdapter):
         if config is None:
             default_config = {
                 "ws_reconnect_interval": 30,
-                "ws_timeout": 70
+                "ws_timeout": 70,
+                "accounts": {
+                    "default": {
+                        "email": "your_email@example.com",
+                        "password": "your_password",
+                        "platform": "windows",
+                        "device_id": "",
+                        "enabled": True
+                    }
+                }
             }
             self.config_manager.setConfig("YunhuUserAdapter", default_config)
+            self.logger.info("已写入默认配置和默认账户模板，请修改 config.toml 中的账户信息")
             return default_config
         
         # 确保配置值为正确的类型
