@@ -7,8 +7,9 @@ class MessageTypes:
     ARTICLE = 6
     STICKER = 7
     HTML = 8
-    AUDIO = 11
     VIDEO = 10
+    AUDIO = 11
+    A2UI = 14
 
 
 class ChatType:

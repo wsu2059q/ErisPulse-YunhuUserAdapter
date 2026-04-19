@@ -99,9 +99,11 @@ class YunhuWSClient:
                             elif not self.decode:
                                 yield message
                                 
-                        except asyncio.TimeoutError:
-                            # 超时，继续等待
-                            continue
+                        except websockets.ConnectionClosed as e:
+                            # WebSocket 连接关闭
+                            if self._running:
+                                print(f"WebSocket 连接关闭: code={e.code}, reason={e.reason}")
+                            break
                         except Exception as e:
                             # 其他错误，打印日志
                             if self._running:
@@ -123,14 +125,15 @@ class YunhuWSClient:
     
     async def _heartbeat_loop(self, ws):
         import asyncio
-        heartbeat_data = {
-            "seq": uuid.uuid4().hex,
-            "cmd": "heartbeat",
-            "data": {}
-        }
         
         while self._running:
             try:
+                # 每次心跳生成新的 seq
+                heartbeat_data = {
+                    "seq": uuid.uuid4().hex,
+                    "cmd": "heartbeat",
+                    "data": {}
+                }
                 heartbeat_json = json.dumps(heartbeat_data)
                 await ws.send(heartbeat_json)
                 await asyncio.sleep(30)  # 30 秒发送一次心跳

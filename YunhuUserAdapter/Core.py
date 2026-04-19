@@ -79,7 +79,7 @@ class YunhuUserAdapter(BaseAdapter):
 
         config = self.config_manager.getConfig("YunhuUserAdapter", {})
 
-        if config is None:
+        if not config:
             default_config = {
                 "ws_reconnect_interval": 30,
                 "ws_timeout": 70,
@@ -93,7 +93,7 @@ class YunhuUserAdapter(BaseAdapter):
                     }
                 },
             }
-            self.config_manager.setConfig("YunhuUserAdapter", default_config)
+            self.config_manager.setConfig("YunhuUserAdapter", default_config, immediate=True)
             self.logger.info(
                 "已写入默认配置和默认账户模板，请修改 config.toml 中的账户信息"
             )
@@ -147,6 +147,15 @@ class YunhuUserAdapter(BaseAdapter):
                 )
 
                 if account_config.email and account_config.password:
+                    # 跳过模板账户（未修改的默认配置）
+                    template_emails = {"your_email@example.com"}
+                    template_passwords = {"your_password"}
+                    if account_config.email in template_emails and account_config.password in template_passwords:
+                        self.logger.warning(
+                            f"跳过模板账户: {account_name}，请修改 config.toml 中的账户信息"
+                        )
+                        continue
+
                     self._account_configs[account_name] = account_config
                     self.logger.info(
                         f"加载账户: {account_name} ({account_config.email})"
@@ -326,8 +335,21 @@ class YunhuUserAdapter(BaseAdapter):
                         self._handle_ws_event(ws_event, account_name, account)
                     )
 
-                # 正常退出循环
-                break
+                # 如果是主动关闭，直接退出
+                if not self._running:
+                    break
+
+                # 连接意外断开，进行重试
+                retry_count += 1
+                self.logger.warning(
+                    f"账户 {account_name} WebSocket 连接断开 (重试 {retry_count}/{max_retries})"
+                )
+
+                if retry_count < max_retries:
+                    await asyncio.sleep(reconnect_interval)
+                else:
+                    self.logger.error(f"账户 {account_name} 达到最大重试次数，停止重连")
+                    break
 
             except Exception as e:
                 retry_count += 1

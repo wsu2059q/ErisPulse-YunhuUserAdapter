@@ -1,4 +1,5 @@
 import asyncio
+import json
 import time
 from dataclasses import dataclass, field
 from pathlib import Path
@@ -34,12 +35,14 @@ class TestConfig:
     enable_format_tests: bool = True  # 格式化消息测试（17-19）
     enable_chain_tests: bool = True  # 链式调用测试（20-24）
     enable_mention_tests: bool = True  # @功能测试（25-26）
+    enable_a2ui_tests: bool = True  # A2UI 测试（27-29）
     
     # 单独启用的测试（列表形式）
     # 例如：[1, 6, 7] 表示只运行测试1、6和7
     # 如果为空列表，则根据上面的 bool 配置运行
-    specific_tests: List[int] = field(default_factory=list)
+    # specific_tests: List[int] = field(default_factory=list)
     # specific_tests = [12, 13, 14, 21, 22]
+    specific_tests = [27, 28, 29]
     
     # URL 配置
     image_url: str = "https://http.cat/200"
@@ -109,6 +112,8 @@ class TestRunner:
         self._add_chain_tests()
         # @功能测试
         self._add_mention_tests()
+        # A2UI 测试
+        self._add_a2ui_tests()
     
     def _add_basic_tests(self):
         """添加基础测试用例"""
@@ -164,6 +169,14 @@ class TestRunner:
         self.test_cases.extend([
             TestCase("@全体成员", self.config.enable_mention_tests, None),
             TestCase("@全体 + @用户组合", self.config.enable_mention_tests, None),
+        ])
+    
+    def _add_a2ui_tests(self):
+        """添加A2UI测试用例"""
+        self.test_cases.extend([
+            TestCase("发送A2UI消息（字典）", self.config.enable_a2ui_tests, None),
+            TestCase("发送A2UI消息（字符串）", self.config.enable_a2ui_tests, None),
+            TestCase("发送A2UI消息（Raw_ob12）", self.config.enable_a2ui_tests, None),
         ])
     
     def _check_response(self, response: Any) -> tuple[bool, Optional[dict]]:
@@ -411,6 +424,91 @@ class TestRunner:
         # 26. @全体 + @用户组合
         elif test_num == 26:
             return await self.adapter.To("group", group_id).AtAll().At(test_user_id).Text("全体 + 单个@")
+        
+        # 27. 发送A2UI消息 - Column/Row/Button/Divider 布局
+        elif test_num == 27:
+            a2ui_data = {
+                "version": "v0.9",
+                "updateComponents": {
+                    "surfaceId": "test-layout-1",
+                    "components": [
+                        {"id": "root", "component": "Column", "children": ["title", "d1", "row1", "d2", "row2"]},
+                        {"id": "title", "component": "Text", "text": "A2UI Test Panel", "variant": "h2"},
+                        {"id": "d1", "component": "Divider"},
+                        {"id": "row1", "component": "Row", "justify": "spaceBetween", "children": ["label1", "val1"]},
+                        {"id": "label1", "component": "Text", "text": "Status: OK"},
+                        {"id": "val1", "component": "Text", "text": "v0.9"},
+                        {"id": "d2", "component": "Divider"},
+                        {"id": "row2", "component": "Row", "justify": "center", "children": ["btn1", "btn2"]},
+                        {"id": "btn1label", "component": "Text", "text": "Confirm"},
+                        {"id": "btn1", "component": "Button", "child": "btn1label", "variant": "primary"},
+                        {"id": "btn2label", "component": "Text", "text": "Cancel"},
+                        {"id": "btn2", "component": "Button", "child": "btn2label", "variant": "borderless"}
+                    ]
+                }
+            }
+            return await self.adapter.To("group", group_id).A2ui(a2ui_data)
+
+        # 28. 发送A2UI消息 - Card/List/Image/Slider/Toggle/Input 布局
+        elif test_num == 28:
+            a2ui_data = {
+                "version": "v0.9",
+                "updateComponents": {
+                    "surfaceId": "test-widgets-1",
+                    "components": [
+                        {"id": "root", "component": "Column", "children": ["card1", "sliderRow", "toggleRow", "inputRow"]},
+                        {"id": "card1", "component": "Card", "child": "cardContent"},
+                        {"id": "cardContent", "component": "Column", "children": ["cardTitle", "listWidget"]},
+                        {"id": "cardTitle", "component": "Text", "text": "Widget Showcase", "variant": "h3"},
+                        {"id": "listWidget", "component": "List", "children": ["li1", "li2", "li3"]},
+                        {"id": "li1", "component": "Text", "text": "[Text] Text message sending"},
+                        {"id": "li2", "component": "Text", "text": "[Media] Image/Video/Audio sending"},
+                        {"id": "li3", "component": "Text", "text": "[A2UI] Rich UI rendering"},
+                        {"id": "sliderRow", "component": "Row", "children": ["sliderLabel", "slider1"]},
+                        {"id": "sliderLabel", "component": "Text", "text": "Volume:"},
+                        {"id": "slider1", "component": "Slider", "label": "Volume", "value": 0.7, "min": 0.0, "max": 1.0},
+                        {"id": "toggleRow", "component": "Row", "children": ["toggleLabel", "toggle1"]},
+                        {"id": "toggleLabel", "component": "Text", "text": "Enable:"},
+                        {"id": "toggle1", "component": "Toggle", "label": "Dark Mode", "value": True},
+                        {"id": "inputRow", "component": "Row", "children": ["input1"]},
+                        {"id": "input1", "component": "TextInput", "label": "Search", "placeholder": "Type here..."}
+                    ]
+                }
+            }
+            return await self.adapter.To("group", group_id).A2ui(a2ui_data)
+
+        # 29. 发送A2UI消息 - Tabs/Expandable/Progress/Checkbox/Spinner 布局
+        elif test_num == 29:
+            a2ui_json = json.dumps({
+                "version": "v0.9",
+                "updateComponents": {
+                    "surfaceId": "test-advanced-1",
+                    "components": [
+                        {"id": "root", "component": "Column", "children": ["tabs1", "progress1", "checkSection", "expandSection"]},
+                        {"id": "tabs1", "component": "Tabs", "tabs": [
+                            {"label": "Overview", "content": "tabA"},
+                            {"label": "Details", "content": "tabB"}
+                        ], "activeTab": 0},
+                        {"id": "tabA", "component": "Column", "children": ["tabATitle", "tabADesc"]},
+                        {"id": "tabATitle", "component": "Text", "text": "Overview Tab", "variant": "h3"},
+                        {"id": "tabADesc", "component": "Text", "text": "This tab shows overview information sent via Raw_ob12."},
+                        {"id": "tabB", "component": "Column", "children": ["tabBTitle", "tabBSlider"]},
+                        {"id": "tabBTitle", "component": "Text", "text": "Detail Tab", "variant": "h3"},
+                        {"id": "tabBSlider", "component": "Slider", "label": "Progress", "value": 0.5, "min": 0.0, "max": 1.0},
+                        {"id": "progress1", "component": "Progress", "label": "Loading", "value": 75, "max": 100},
+                        {"id": "checkSection", "component": "Row", "children": ["chk1", "chk2", "chk3"]},
+                        {"id": "chk1", "component": "Checkbox", "label": "Option A", "value": True},
+                        {"id": "chk2", "component": "Checkbox", "label": "Option B", "value": False},
+                        {"id": "chk3", "component": "Checkbox", "label": "Option C", "value": True},
+                        {"id": "expandSection", "component": "Expandable", "label": "More Info", "child": "expandContent"},
+                        {"id": "expandContent", "component": "Text", "text": "This is expanded content with additional details."}
+                    ]
+                }
+            }, ensure_ascii=False)
+            ob12_message = [
+                {"type": "a2ui", "data": {"a2ui": a2ui_json}}
+            ]
+            return await self.adapter.To("group", group_id).Raw_ob12(ob12_message)
         
         return None
     

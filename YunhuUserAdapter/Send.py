@@ -337,6 +337,25 @@ class Send(BaseAdapter.Send):
             [{"type": "face", "data": {"file": file, "buttons": buttons}}]
         )
 
+    def A2ui(self, a2ui_data: Union[str, Dict, List], buttons: Optional[List] = None) -> asyncio.Task:
+        """
+        发送 A2UI 消息（消息类型14）
+
+        A2UI JSON 数据会填入 text 字段发送
+
+        :param a2ui_data: A2UI JSON 数据（字符串、字典或列表）
+        :param buttons: 按钮列表
+        :return: asyncio.Task
+        """
+        if isinstance(a2ui_data, (dict, list)):
+            a2ui_str = json.dumps(a2ui_data, ensure_ascii=False)
+        else:
+            a2ui_str = str(a2ui_data)
+
+        return self.Raw_ob12(
+            [{"type": "a2ui", "data": {"a2ui": a2ui_str, "buttons": buttons}}]
+        )
+
     def Edit(self, msg_id: str, text: str, content_type: str = "text") -> asyncio.Task:
         """
         编辑消息
@@ -549,6 +568,12 @@ class Send(BaseAdapter.Send):
             elif seg_type == "face":
                 file = seg_data.get("file", "")
                 return await self._send_face(file, buttons=final_buttons)
+
+            elif seg_type == "a2ui":
+                a2ui_str = seg_data.get("a2ui", "")
+                return await self._send_text_like(
+                    a2ui_str, MessageTypes.A2UI, final_buttons
+                )
 
             elif seg_type == "reply":
                 return await self._send_text_like("", MessageTypes.TEXT, final_buttons)

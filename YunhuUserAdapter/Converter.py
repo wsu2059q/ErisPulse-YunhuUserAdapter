@@ -309,6 +309,15 @@ class YunhuUserConverter:
                     }
                 })
         
+        # A2UI 消息
+        elif content_type == 14:
+            a2ui_text = content.get("text", "")
+            if a2ui_text:
+                segments.append({
+                    "type": "a2ui",
+                    "data": {"a2ui": a2ui_text}
+                })
+        
         # 视频消息
         # 假设视频消息使用 content_type 13 或其他
         video_url = content.get("video_url", "")
@@ -375,6 +384,8 @@ class YunhuUserConverter:
                 texts.append(f"[文件: {data.get('file_name', '')}]")
             elif seg_type == "mention":
                 texts.append(f"@{data.get('user_id', '')}")
+            elif seg_type == "a2ui":
+                texts.append("[A2UI]")
         
         return " ".join(texts)
     
