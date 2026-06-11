@@ -1,6 +1,6 @@
 [project]
 name = "ErisPulse-YunhuUserAdapter"
-version = "1.4.0"
+version = "4.0.0"
 description = "云湖用户账户驱动适配器，支持通过用户账号与云湖平台交互"
 readme = "README.md"
 requires-python = ">=3.10"
@@ -9,9 +9,7 @@ authors = [
 ]
 
 dependencies = [
-    "aiohttp",
     "protobuf>=6.31.1",
-    "websockets>=15.0.1",
     "mutagen>=1.47.0",
     "filetype>=1.2.0",
 ]

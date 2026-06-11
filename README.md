@@ -82,6 +82,9 @@ await yunhu.Send.To("group", "group_id").Markdown("**粗体** 和 *斜体*")
 # HTML 消息
 await yunhu.Send.To("group", "group_id").Html("<b>加粗</b> 和 <i>斜体</i>")
 
+# A2UI 消息
+await yunhu.Send.To("group", "group_id").A2ui({"type": "card", "content": "..."})
+
 # 编辑消息
 await yunhu.Send.To("group", "group_id").Edit("message_id", "新内容")
 
@@ -104,6 +107,9 @@ await yunhu.Send.To("group", "group_id").File("https://example.com/document.pdf"
 
 # 语音消息
 await yunhu.Send.To("group", "group_id").Audio("https://example.com/audio.mp3")
+
+# 表情消息（URL 或 表情ID 或 二进制数据）
+await yunhu.Send.To("group", "group_id").Face("https://example.com/sticker.png")
 ```
 
 ### OneBot12 原始消息
@@ -116,6 +122,35 @@ ob12_message = [
 ]
 await yunhu.Send.To("group", "group_id").Raw_ob12(ob12_message)
 ```
+
+## 配置
+
+在 `config.toml` 中配置：
+
+```toml
+[YunhuUserAdapter]
+ws_reconnect_interval = 30
+ws_timeout = 70
+
+[YunhuUserAdapter.accounts.default]
+email = "your_email@example.com"
+password = "your_password"
+platform = "windows"
+device_id = ""
+enabled = true
+```
+
+### 配置说明
+
+| 字段 | 类型 | 默认值 | 说明 |
+|------|------|--------|------|
+| `ws_reconnect_interval` | int | 30 | WebSocket 重连间隔（秒） |
+| `ws_timeout` | int | 70 | WebSocket 超时时间（秒） |
+| `accounts.<name>.email` | str | - | 登录邮箱 |
+| `accounts.<name>.password` | str | - | 登录密码 |
+| `accounts.<name>.platform` | str | "windows" | 登录平台 |
+| `accounts.<name>.device_id` | str | "" | 设备ID（留空自动生成） |
+| `accounts.<name>.enabled` | bool | true | 是否启用 |
 
 ## 事件监听
 
@@ -157,7 +192,7 @@ async def hello_command(event):
     "user_nickname": "发送者昵称",
     "group_id": "group_id",   # 群消息时包含
     "yunhu_user_raw": {...},  # 原始事件数据
-    "yunhu_user_raw_type": "message.receive.normal"  # 原始事件类型
+    "yunhu_user_raw_type": "push_message"  # 原始事件类型
 }
 ```
 
@@ -166,11 +201,11 @@ async def hello_command(event):
 所有云湖用户特有字段都以 `yunhu_user_` 前缀标识：
 
 - `yunhu_user_raw`: 原始事件数据（包含完整的云湖协议数据）
-- `yunhu_user_raw_type`: 原始事件类型（如 `message.receive.normal`、`message.receive.notice` 等）
+- `yunhu_user_raw_type`: 原始事件类型（如 `push_message`、`edit_message` 等）
 
 ## API 响应格式
 
-适配器的 `call_api` 方法返回符合ob12的响应格式：
+适配器的 `call_api` 方法返回符合 OneBot12 的响应格式：
 
 ```python
 {
@@ -190,7 +225,9 @@ async def hello_command(event):
 | 原始事件类型 | OneBot12 类型 | 说明 |
 |-------------|--------------|------|
 | `push_message` | `message` | 推送消息（包括私聊、群聊）|
-| `edit_message` | `message` | 消息编辑事件 |
+| `edit_message` | `notice` | 消息编辑事件 |
+| `file_send_message` | `notice` | 超级文件分享事件 |
+| `bot_board_message` | `notice` | 机器人公告设置事件 |
 
 其他事件类型（如 `heartbeat_ack`、`draft_input` 等）会被忽略。
 
@@ -207,15 +244,17 @@ async def hello_command(event):
 ## 开发状态
 
 - [x] 基础适配器结构
-- [x] 多账户支持
-- [x] WebSocket 连接和消息接收
+- [x] 多账户支持（AccountConfigClass 声明式配置）
+- [x] WebSocket 连接和消息接收（使用 sdk.client.ws_connect）
 - [x] 自动重连机制
 - [x] 事件转换（OneBot12 格式）
-- [x] 消息发送（文本、图片、视频、文件、语音、Markdown、HTML）
+- [x] 消息发送（文本、图片、视频、文件、语音、Markdown、HTML、A2UI、表情）
 - [x] 链式修饰（Reply、Buttons、At、AtAll）
 - [x] 消息管理（Edit、Recall）
 - [x] 用户邮箱登录
 - [x] Raw_ob12 原始消息发送
+- [x] sdk.client 统一 HTTP 客户端（移除直接 aiohttp 依赖）
+- [x] sdk.client.ws_connect 统一 WebSocket 客户端（移除直接 websockets 依赖）
 
 ## 致谢
 

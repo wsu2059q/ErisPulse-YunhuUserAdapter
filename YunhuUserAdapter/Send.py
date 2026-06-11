@@ -10,6 +10,7 @@ from ErisPulse.Core.Bases import BaseAdapter
 
 
 class Send(BaseAdapter.Send):
+
     def __init__(
         self,
         adapter_obj,
@@ -17,121 +18,56 @@ class Send(BaseAdapter.Send):
         target_id: Optional[str] = None,
         account_id: Optional[str] = None,
     ):
-        self._adapter = adapter_obj
-        self._target_type = target_type
-        self._target_id = target_id
-        self._account_id = account_id
-
-        # 链式修饰属性
-        self._at_user_ids = []
-        self._at_all = False
-        self._reply_message_id = None
+        super().__init__(adapter_obj, target_type, target_id, account_id)
         self._buttons = None
-
-        # 初始化媒体处理器
         self._media_handler = None
-
-    def At(self, user_id: str) -> "Send":
-        if user_id not in self._at_user_ids:
-            self._at_user_ids.append(user_id)
-        return self
-
-    def AtAll(self) -> "Send":
-        self._at_all = True
-        return self
-
-    def Reply(self, message_id: str) -> "Send":
-        self._reply_message_id = message_id
-        return self
 
     def Buttons(self, buttons: List[Dict[str, Any]]) -> "Send":
         self._buttons = buttons
         return self
 
-    def _get_account(self) -> Optional[Dict[str, Any]]:
-        """
-        获取当前账户
-        """
-        if self._account_id:
-            return self._adapter._get_account_by_id(self._account_id)
+    def _reset_modifiers(self):
+        self._buttons = None
 
-        if self._adapter.accounts:
-            return next(iter(self._adapter.accounts.values()))
-
-        return None
-
-    def _get_http_client(self):
-        """获取当前账户的 HTTP 客户端"""
-        from .client.http import YunhuHTTPClient
-
-        account = self._get_account()
-        if account:
-            account_name = account["name"]
+    def _resolve_http_client(self):
+        account_name = self._adapter._resolve_to_account_name(self._account_id)
+        if account_name:
             return self._adapter._get_http_client(account_name)
         return None
 
     def _get_media_handler(self) -> MediaHandler:
-        """
-        获取或创建媒体处理器
-        """
         if self._media_handler is None:
-            http_client = self._get_http_client()
+            http_client = self._resolve_http_client()
             self._media_handler = MediaHandler(http_client, self._adapter.logger)
         return self._media_handler
 
     def _map_detail_type_to_chat_type(self) -> int:
-        """
-        将 OneBot12 detail_type 映射到云湖 chat_type
-
-        :return: 云湖 chat_type
-        """
         return CHAT_TYPE_MAP.get(self._target_type, ChatType.GROUP)
 
     def _build_send_content(self, quote_text: str = "") -> Dict[str, Any]:
-        """
-        构建发送消息内容
-
-        :param quote_text: 引用消息的文本（如果需要回复）
-        :return: 消息内容字典
-        """
         content = {}
 
-        # 添加 @用户
         if self._at_user_ids:
             content["mentioned_id"] = self._at_user_ids
 
-        # 添加回复
         if self._reply_message_id:
             content["quote_msg_id"] = self._reply_message_id
-            # 使用传入的引用文本
             if quote_text:
                 content["quote_msg_text"] = quote_text
 
-        # 添加按钮
         if self._buttons:
             content["buttons"] = json.dumps(self._buttons)
 
         return content
 
     async def _get_quote_text_if_needed(self) -> str:
-        """
-        如果需要回复消息，获取被引用消息的真实文本
-
-        :return: 引用消息文本，如果不需要回复则返回空字符串
-        """
         if self._reply_message_id:
             return await self._get_quote_message_text(self._reply_message_id)
         return ""
 
     async def _get_quote_message_text(self, message_id: str) -> str:
-        """
-        获取被引用消息的文本内容
-
-        :param message_id: 消息 ID
-        :return: 消息文本内容
-        """
         try:
-            http_client = self._get_http_client()
+            http_client = self._resolve_http_client()
             if not http_client:
                 return ""
 
@@ -142,7 +78,6 @@ class Send(BaseAdapter.Send):
                 msg_count=1,
             )
 
-            # 解析响应获取消息文本
             if response and response.get("status", {}).get("code") == 1:
                 messages = response.get("msg", [])
                 if messages and len(messages) > 0:
@@ -159,22 +94,12 @@ class Send(BaseAdapter.Send):
     async def _send_text_like(
         self, text: str, msg_type: int, buttons: Optional[List] = None
     ) -> Dict[str, Any]:
-        """
-        统一发送文本类消息
-
-        :param text: 文本内容
-        :param msg_type: 消息类型
-        :param buttons: 按钮列表
-        :return: 发送结果
-        """
-        http_client = self._get_http_client()
+        http_client = self._resolve_http_client()
         if not http_client:
             return ResponseFormatter.failed(10003, "没有可用的账户")
 
-        # 获取引用消息的真实文本
         quote_text = await self._get_quote_text_if_needed()
 
-        # 构建发送数据
         send_content = self._build_send_content(quote_text)
         send_content["text"] = text
         if buttons:
@@ -204,31 +129,17 @@ class Send(BaseAdapter.Send):
         extra_content: Optional[Dict] = None,
         buttons: Optional[List] = None,
     ) -> Dict[str, Any]:
-        """
-        统一发送媒体消息
-
-        :param file: 文件 URL 或二进制数据
-        :param file_type: 文件类型
-        :param msg_type: 消息类型
-        :param extra_content: 额外内容（如 file_size, audio_time 等）
-        :param buttons: 按钮列表
-        :return: 发送结果
-        """
         try:
-            # 处理文件
             media_handler = self._get_media_handler()
             process_result = await media_handler.process_file(file, file_type)
 
             if not process_result:
                 return ResponseFormatter.failed(10003, "文件处理失败")
 
-            # 获取引用消息的真实文本
             quote_text = await self._get_quote_text_if_needed()
 
-            # 构建发送内容
             send_content = self._build_send_content(quote_text)
 
-            # 根据文件类型设置内容字段
             content_field_map = {
                 "image": "image",
                 "video": "video",
@@ -238,23 +149,18 @@ class Send(BaseAdapter.Send):
             content_field = content_field_map.get(file_type, "file")
             send_content[content_field] = process_result["key"]
 
-            # 自动添加文件大小
             send_content["file_size"] = process_result["file_size"]
 
-            # 自动添加文件名（仅文件类型）
             if file_type == "file" and process_result.get("filename"):
                 send_content["file_name"] = process_result["filename"]
 
-            # 添加额外内容（允许覆盖自动检测的值）
             if extra_content:
                 send_content.update(extra_content)
 
-            # 添加按钮
             if buttons:
                 send_content["buttons"] = json.dumps(buttons)
 
-            # 发送消息
-            http_client = self._get_http_client()
+            http_client = self._resolve_http_client()
             msg_id = uuid.uuid4().hex
             response = await http_client.send_message(
                 chat_id=self._target_id,
@@ -271,8 +177,6 @@ class Send(BaseAdapter.Send):
         except Exception as e:
             self._adapter.logger.error(f"发送媒体消息失败: {e}")
             return ResponseFormatter.error(e)
-
-    # ============ 公开发送方法（委托给 Raw_ob12） ============
 
     def Text(self, text: str, buttons: Optional[List] = None) -> asyncio.Task:
         return self.Raw_ob12(
@@ -338,15 +242,6 @@ class Send(BaseAdapter.Send):
         )
 
     def A2ui(self, a2ui_data: Union[str, Dict, List], buttons: Optional[List] = None) -> asyncio.Task:
-        """
-        发送 A2UI 消息（消息类型14）
-
-        A2UI JSON 数据会填入 text 字段发送
-
-        :param a2ui_data: A2UI JSON 数据（字符串、字典或列表）
-        :param buttons: 按钮列表
-        :return: asyncio.Task
-        """
         if isinstance(a2ui_data, (dict, list)):
             a2ui_str = json.dumps(a2ui_data, ensure_ascii=False)
         else:
@@ -357,17 +252,8 @@ class Send(BaseAdapter.Send):
         )
 
     def Edit(self, msg_id: str, text: str, content_type: str = "text") -> asyncio.Task:
-        """
-        编辑消息
-
-        :param msg_id: 消息 ID
-        :param text: 新消息内容
-        :param content_type: 内容类型
-        :return: asyncio.Task
-        """
-
         async def _edit():
-            http_client = self._get_http_client()
+            http_client = self._resolve_http_client()
             if not http_client:
                 return ResponseFormatter.failed(10003, "没有可用的账户")
 
@@ -395,15 +281,8 @@ class Send(BaseAdapter.Send):
         return asyncio.create_task(_edit())
 
     def Recall(self, msg_id: str) -> asyncio.Task:
-        """
-        撤回消息
-
-        :param msg_id: 消息 ID
-        :return: asyncio.Task
-        """
-
         async def _recall():
-            http_client = self._get_http_client()
+            http_client = self._resolve_http_client()
             if not http_client:
                 return ResponseFormatter.failed(10003, "没有可用的账户")
 
@@ -438,22 +317,13 @@ class Send(BaseAdapter.Send):
         return asyncio.create_task(_send_grouped_messages())
 
     def _group_ob12_messages(self, message: List[Dict]) -> List[List[Dict]]:
-        """
-        将 OneBot12 消息段数组分组
-
-        :param message: OneBot12 消息段数组
-        :return: 分组后的消息段数组列表
-        """
         groups = []
         current_group = []
-
-        # 定义可以合并到文本组的消息类型
         text_mergeable_types = ["text", "mention"]
 
         for segment in message:
             seg_type = segment.get("type", "")
 
-            # 回复消息可以附加到任何组
             if seg_type == "reply":
                 if not current_group:
                     current_group.append(segment)
@@ -461,7 +331,6 @@ class Send(BaseAdapter.Send):
                     current_group.append(segment)
                 continue
 
-            # 文本消息、@可以合并
             if seg_type in text_mergeable_types:
                 if not current_group or all(
                     s.get("type") in text_mergeable_types or s.get("type") == "reply"
@@ -473,14 +342,12 @@ class Send(BaseAdapter.Send):
                         groups.append(current_group)
                     current_group = [segment]
 
-            # 其他消息类型单独成组
             else:
                 if current_group:
                     groups.append(current_group)
                 groups.append([segment])
                 current_group = []
 
-        # 保存最后一组
         if current_group:
             groups.append(current_group)
 
@@ -591,12 +458,6 @@ class Send(BaseAdapter.Send):
             self._reply_message_id = old_reply_id
             self._buttons = old_buttons
 
-    def _reset_modifiers(self):
-        self._at_user_ids = []
-        self._at_all = False
-        self._reply_message_id = None
-        self._buttons = None
-
     async def _send_audio(self, file, buttons: Optional[List] = None) -> Dict[str, Any]:
         try:
             media_handler = self._get_media_handler()
@@ -624,7 +485,7 @@ class Send(BaseAdapter.Send):
             if buttons:
                 send_content["buttons"] = json.dumps(buttons)
 
-            http_client = self._get_http_client()
+            http_client = self._resolve_http_client()
             msg_id = uuid.uuid4().hex
             response = await http_client.send_message(
                 chat_id=self._target_id,
@@ -643,7 +504,7 @@ class Send(BaseAdapter.Send):
 
     async def _send_face(self, file, buttons: Optional[List] = None) -> Dict[str, Any]:
         try:
-            http_client = self._get_http_client()
+            http_client = self._resolve_http_client()
             if not http_client:
                 return ResponseFormatter.failed(10003, "没有可用的账户")
 
