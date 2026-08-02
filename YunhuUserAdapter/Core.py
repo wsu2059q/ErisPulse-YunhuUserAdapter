@@ -23,7 +23,7 @@ class YunhuUserAccountConfig(BotAccountConfig):
         metadata={
             "description": "登录邮箱",
             "required": True,
-            "webui": {"widget": "text", "group": "basic", "order": 1},
+            "ui": {"widget": "text", "group": "basic", "order": 1},
         },
     )
     password: str = field(
@@ -32,14 +32,14 @@ class YunhuUserAccountConfig(BotAccountConfig):
             "description": "登录密码",
             "required": True,
             "secret": True,
-            "webui": {"widget": "password", "group": "basic", "order": 2},
+            "ui": {"widget": "password", "group": "basic", "order": 2},
         },
     )
     platform: str = field(
         default="windows",
         metadata={
             "description": "登录平台",
-            "webui": {
+            "ui": {
                 "widget": "select",
                 "group": "connection",
                 "order": 3,
@@ -58,7 +58,7 @@ class YunhuUserAccountConfig(BotAccountConfig):
         default="",
         metadata={
             "description": "设备ID（留空自动生成）",
-            "webui": {"widget": "text", "group": "connection", "order": 4},
+            "ui": {"widget": "text", "group": "connection", "order": 4},
         },
     )
 
@@ -71,14 +71,14 @@ class YunhuUserAdapterConfig:
         default=30,
         metadata={
             "description": "WebSocket 重连间隔（秒）",
-            "webui": {"widget": "number", "group": "connection", "order": 1},
+            "ui": {"widget": "number", "group": "connection", "order": 1},
         },
     )
     ws_timeout: int = field(
         default=70,
         metadata={
             "description": "WebSocket 超时时间（秒）",
-            "webui": {"widget": "number", "group": "connection", "order": 2},
+            "ui": {"widget": "number", "group": "connection", "order": 2},
         },
     )
 
