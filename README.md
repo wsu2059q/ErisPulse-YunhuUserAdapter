@@ -12,7 +12,7 @@
   <a href="https://pypi.org/project/ErisPulse-YunhuUserAdapter/"><img src="https://img.shields.io/pypi/v/ErisPulse-YunhuUserAdapter?style=for-the-badge&logo=pypi&logoColor=white" alt="PyPI"></a>
   <a href="https://pypi.org/project/ErisPulse-YunhuUserAdapter/"><img src="https://img.shields.io/badge/Python-3.10+-FFD43B?style=for-the-badge&logo=python&logoColor=blue" alt="Python"></a>
   <a href="./LICENSE"><img src="https://img.shields.io/badge/License-MIT-blue?style=for-the-badge" alt="License"></a>
-  <a href="https://github.com/ErisPulse/ErisPulse-YunhuUserAdapter"><img src="https://img.shields.io/github/stars/ErisPulse/ErisPulse-YunhuUserAdapter?style=for-the-badge&logo=github&color=brightgreen" alt="Stars"></a>
+  <a href="https://github.com/wsu2059q/ErisPulse-YunhuUserAdapter"><img src="https://img.shields.io/github/stars/wsu2059q/ErisPulse-YunhuUserAdapter?style=for-the-badge&logo=github&color=brightgreen" alt="Stars"></a>
   <a href="https://pepy.tech/project/ErisPulse-YunhuUserAdapter"><img src="https://img.shields.io/pepy/dt/ErisPulse-YunhuUserAdapter?style=for-the-badge&color=blue" alt="Downloads"></a>
   <a href="https://github.com/ErisPulse/ErisPulse"><img src="https://img.shields.io/badge/Powered_by-ErisPulse-FF6B9D?style=for-the-badge&logo=bookstack&logoColor=white" alt="ErisPulse"></a>
 </p>
