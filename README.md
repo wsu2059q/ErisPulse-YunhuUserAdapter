@@ -1,6 +1,25 @@
-# ErisPulse 云湖用户账户驱动适配器
+<div align="center">
 
-基于云湖用户账户而实现的 ErisPulse 适配器
+<img src=".github/assets/ErisPulseLogo.png" width="180" alt="ErisPulse YunhuUserAdapter" />
+
+# ErisPulse YunhuUserAdapter
+
+**云湖用户账户驱动适配器 —— 用个人账户驱动 Bot。**
+
+基于云湖用户账户协议实现的 ErisPulse 适配器，支持多账户、WebSocket 长连接与自动重连，提供文本 / 图片 / 视频 / 文件 / 语音 / Markdown / HTML / A2UI 等完整消息收发能力。
+
+<p>
+  <a href="https://pypi.org/project/ErisPulse-YunhuUserAdapter/"><img src="https://img.shields.io/pypi/v/ErisPulse-YunhuUserAdapter?style=for-the-badge&logo=pypi&logoColor=white" alt="PyPI"></a>
+  <a href="https://pypi.org/project/ErisPulse-YunhuUserAdapter/"><img src="https://img.shields.io/badge/Python-3.10+-FFD43B?style=for-the-badge&logo=python&logoColor=blue" alt="Python"></a>
+  <a href="./LICENSE"><img src="https://img.shields.io/badge/License-MIT-blue?style=for-the-badge" alt="License"></a>
+  <a href="https://github.com/ErisPulse/ErisPulse-YunhuUserAdapter"><img src="https://img.shields.io/github/stars/ErisPulse/ErisPulse-YunhuUserAdapter?style=for-the-badge&logo=github&color=brightgreen" alt="Stars"></a>
+  <a href="https://pepy.tech/project/ErisPulse-YunhuUserAdapter"><img src="https://img.shields.io/pepy/dt/ErisPulse-YunhuUserAdapter?style=for-the-badge&color=blue" alt="Downloads"></a>
+  <a href="https://github.com/ErisPulse/ErisPulse"><img src="https://img.shields.io/badge/Powered_by-ErisPulse-FF6B9D?style=for-the-badge&logo=bookstack&logoColor=white" alt="ErisPulse"></a>
+</p>
+
+</div>
+
+---
 
 ## 安装
 
