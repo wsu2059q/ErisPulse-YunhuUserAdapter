@@ -1,11 +1,16 @@
 import time
 import uuid
 from typing import Optional, Dict, Any, List
+
+from ErisPulse.Core.Bases import BaseConverter
 from .proto import ws_pb2 as ws_pb2
 
 
-class YunhuUserConverter:
-    
+class YunhuUserConverter(BaseConverter):
+
+    def __init__(self):
+        super().__init__(platform="yunhu_user")
+
     def convert(self, ws_event: Dict[str, Any]) -> Optional[Dict[str, Any]]:
         """
         将云湖 WebSocket 事件转换为 OneBot12 标准格式

@@ -451,3 +451,177 @@ class YunhuHTTPClient:
 
     async def close(self):
         pass
+
+    # ==================== 用户 API 扩展（full.proto / v1 端点） ====================
+
+    async def _proto_request(self, path: str, request_msg, response_cls=None):
+        """通用 protobuf 请求：序列化 request → POST → 解析 response（可选）"""
+        url = f"{self.BASE_URL}{path}"
+        data = request_msg.SerializeToString() if request_msg is not None else b""
+        resp = await client.post(
+            url, headers=self._get_headers(), data=data, timeout=self.timeout
+        )
+        raw = await resp.read()
+        if response_cls is None:
+            from ..proto import full_pb2
+
+            status = full_pb2.StatusResponse()
+            status.ParseFromString(raw)
+            from google.protobuf import json_format
+
+            return json_format.MessageToDict(status, preserving_proto_field_name=True)
+        response = response_cls()
+        response.ParseFromString(raw)
+        from google.protobuf import json_format
+
+        return json_format.MessageToDict(response, preserving_proto_field_name=True)
+
+    async def _json_request(self, path: str, payload: dict) -> Dict[str, Any]:
+        """通用 JSON 请求（用户 API 中部分端点接受 JSON）"""
+        url = f"{self.BASE_URL}{path}"
+        resp = await client.post(
+            url, headers=self._get_headers(), json=payload, timeout=self.timeout
+        )
+        return await resp.json()
+
+    async def get_user(self, user_id: str) -> Dict[str, Any]:
+        """获取用户详细信息（POST /user/get-user）"""
+        from ..proto import full_pb2
+
+        request = full_pb2.GetUserRequest()
+        request.id = str(user_id)
+        return await self._proto_request("/user/get-user", request, full_pb2.GetUserResponse)
+
+    async def edit_nickname(self, nickname: str) -> Dict[str, Any]:
+        """修改自己的昵称（POST /user/edit-nickname）"""
+        from ..proto import full_pb2
+
+        request = full_pb2.EditNicknameRequest()
+        request.name = nickname
+        return await self._proto_request("/user/edit-nickname", request)
+
+    async def edit_avatar(self, avatar_url: str) -> Dict[str, Any]:
+        """修改自己的头像（POST /user/edit-avatar）"""
+        from ..proto import full_pb2
+
+        request = full_pb2.EditAvatarRequest()
+        request.url = avatar_url
+        return await self._proto_request("/user/edit-avatar", request)
+
+    async def friend_address_book(self, md5: str = "") -> Dict[str, Any]:
+        """获取通讯录（POST /friend/address-book-list）"""
+        from ..proto import full_pb2
+
+        request = full_pb2.AddressBookListRequest()
+        if md5:
+            request.md5 = md5
+        return await self._proto_request("/friend/address-book-list", request, full_pb2.AddressBookListResponse)
+
+    async def friend_request_list(self) -> Dict[str, Any]:
+        """获取好友/加群申请列表（POST /friend/request-list）"""
+        from ..proto import full_pb2
+
+        return await self._proto_request("/friend/request-list", None, full_pb2.RequestListResponse)
+
+    async def friend_apply(self, user_id: str, description: str = "") -> Dict[str, Any]:
+        """申请添加好友（POST /friend/apply）"""
+        return await self._json_request("/friend/apply", {
+            "userId": str(user_id), "description": description,
+        })
+
+    async def friend_agree_apply(self, user_id: str, description: str = "") -> Dict[str, Any]:
+        """同意好友申请（POST /friend/agree-apply）"""
+        return await self._json_request("/friend/agree-apply", {
+            "userId": str(user_id), "description": description,
+        })
+
+    async def friend_ignore_apply(self, user_id: str) -> Dict[str, Any]:
+        """忽略好友申请（POST /friend/ignore-apply）"""
+        return await self._json_request("/friend/ignore-apply", {"userId": str(user_id)})
+
+    async def friend_delete(self, user_id: str) -> Dict[str, Any]:
+        """删除好友（POST /friend/delete-friend）"""
+        return await self._json_request("/friend/delete-friend", {"userId": str(user_id)})
+
+    async def group_info(self, group_id: str) -> Dict[str, Any]:
+        """获取群组信息（POST /group/info）"""
+        from ..proto import full_pb2
+
+        request = full_pb2.GroupInfoRequest()
+        request.group_id = str(group_id)
+        return await self._proto_request("/group/info", request, full_pb2.GroupInfoResponse)
+
+    async def group_member_list(self, group_id: str, keywords: str = "") -> Dict[str, Any]:
+        """获取群成员列表（POST /group/list-member）"""
+        from ..proto import full_pb2
+
+        request = full_pb2.ListMemberRequest()
+        request.group_id = str(group_id)
+        if keywords:
+            request.keywords = keywords
+        return await self._proto_request("/group/list-member", request, full_pb2.ListMemberResponse)
+
+    async def conversation_list(self, md5: str = "") -> Dict[str, Any]:
+        """获取会话列表（POST /conversation/list）"""
+        from ..proto import full_pb2
+
+        request = full_pb2.ConversationListRequest()
+        if md5:
+            request.md5 = md5
+        return await self._proto_request("/conversation/list", request, full_pb2.ConversationListResponse)
+
+    async def create_group(self, name: str, introduction: str = "", avatar_url: str = "") -> Dict[str, Any]:
+        """创建群组（POST /group/create-group）"""
+        from ..proto import full_pb2
+
+        request = full_pb2.CreateGroupRequest()
+        request.name = name
+        if introduction:
+            request.introduction = introduction
+        if avatar_url:
+            request.avatar_url = avatar_url
+        return await self._proto_request("/group/create-group", request, full_pb2.CreateGroupResponse)
+
+    async def dismiss_group(self, group_id: str) -> Dict[str, Any]:
+        """解散群组（POST /group/dismiss-group）"""
+        from ..proto import full_pb2
+
+        request = full_pb2.DismissGroupRequest()
+        request.group_id = str(group_id)
+        return await self._proto_request("/group/dismiss-group", request)
+
+    async def group_invite(self, group_id: str, user_ids: list) -> Dict[str, Any]:
+        """邀请用户进群（POST /group/invite）"""
+        return await self._json_request("/group/invite", {
+            "groupId": str(group_id), "userIdList": [str(u) for u in user_ids],
+        })
+
+    async def group_remove_member(self, group_id: str, user_id: str) -> Dict[str, Any]:
+        """移出群成员（POST /group/remove-member）"""
+        return await self._json_request("/group/remove-member", {
+            "groupId": str(group_id), "userId": str(user_id),
+        })
+
+    async def group_gag_member(self, group_id: str, user_id: str, gag_time: int) -> Dict[str, Any]:
+        """禁言群成员（POST /group/gag-member，gag_time 为秒数，0=解除）"""
+        return await self._json_request("/group/gag-member", {
+            "groupId": str(group_id), "userId": str(user_id), "gagTime": int(gag_time),
+        })
+
+    async def group_bot_list(self, group_id: str) -> Dict[str, Any]:
+        """获取群内机器人列表（POST /group/bot-list）"""
+        from ..proto import full_pb2
+
+        request = full_pb2.BotListRequest()
+        request.group_id = str(group_id)
+        return await self._proto_request("/group/bot-list", request, full_pb2.BotListResponse)
+
+    async def bot_board(self, target_id: str, chat_type: int, content: str) -> Dict[str, Any]:
+        """设置看板（POST /bot/board）"""
+        from ..proto import full_pb2
+
+        request = full_pb2.BoardRequest()
+        request.id = str(target_id)
+        request.chat_type = chat_type
+        _ = content  # 看板内容字段见 full.proto BoardRequest/BoardResponse
+        return await self._proto_request("/bot/board", request, full_pb2.BoardResponse)

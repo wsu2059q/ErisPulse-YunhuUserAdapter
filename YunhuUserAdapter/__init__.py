@@ -1,4 +1,4 @@
-from .Core import YunhuUserAdapter
+from .Core import YunhuUserAdapter, __version__
 from .Send import Send
 from . import client
 from . import proto
