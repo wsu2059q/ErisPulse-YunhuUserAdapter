@@ -152,8 +152,10 @@ ws_reconnect_interval = 30
 ws_timeout = 70
 
 [YunhuUserAdapter.accounts.default]
+# 登录方式二选一：直接填 token，或填邮箱+密码（两者同时配置时优先使用 token）
 email = "your_email@example.com"
 password = "your_password"
+token = ""
 platform = "windows"
 device_id = ""
 enabled = true
@@ -165,8 +167,9 @@ enabled = true
 |------|------|--------|------|
 | `ws_reconnect_interval` | int | 30 | WebSocket 重连间隔（秒） |
 | `ws_timeout` | int | 70 | WebSocket 超时时间（秒） |
-| `accounts.<name>.email` | str | - | 登录邮箱 |
-| `accounts.<name>.password` | str | - | 登录密码 |
+| `accounts.<name>.email` | str | "" | 登录邮箱（与 token 二选一） |
+| `accounts.<name>.password` | str | "" | 登录密码（与 token 二选一） |
+| `accounts.<name>.token` | str | "" | 直接登录 token（与邮箱密码二选一，配置后优先使用；可从网页版抓包请求头获取） |
 | `accounts.<name>.platform` | str | "windows" | 登录平台 |
 | `accounts.<name>.device_id` | str | "" | 设备ID（留空自动生成） |
 | `accounts.<name>.enabled` | bool | true | 是否启用 |

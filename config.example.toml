@@ -7,10 +7,14 @@ ws_timeout = 70
 
 # 用户账户配置示例
 [YunhuUserAdapter.accounts.default]
-# 用户邮箱（必填）
+# 登录方式二选一：直接填 token，或填邮箱+密码（两者同时配置时优先使用 token）
+# 用户邮箱（与 token 二选一）
 email = "your_email@example.com"
-# 用户密码（必填）
+# 用户密码（与 token 二选一）
 password = "your_password"
+# 直接登录 token（与邮箱密码二选一，配置后优先使用）
+# 获取方式：登录网页版 chat.jwzhd.com，抓包任意请求的请求头中 token 字段
+token = ""
 # 登录平台（可选，默认windows）
 # 可选值: windows, macos, linux, ios, android
 platform = "windows"
@@ -24,6 +28,7 @@ enabled = true
 # [YunhuUserAdapter.accounts.account2]
 # email = "another_email@example.com"
 # password = "another_password"
+# token = ""
 # platform = "android"
 # device_id = "fixed_device_id_2"
 # enabled = true

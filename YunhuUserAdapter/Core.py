@@ -18,7 +18,7 @@ try:
 except ImportError:  # pragma: no cover
     spawn_background = None
 
-__version__ = "4.2.0"
+__version__ = "4.3.0"
 
 # 软依赖的框架最低版本（运行时检测，仅提示不强制）
 MIN_FRAMEWORK_VERSION = (2, 7, 1)
@@ -31,18 +31,27 @@ class YunhuUserAccountConfig(BotAccountConfig):
     email: str = field(
         default="",
         metadata={
-            "description": "登录邮箱",
-            "required": True,
+            "description": "登录邮箱（与 token 二选一）",
+            "required": False,
             "ui": {"widget": "text", "group": "basic", "order": 1},
         },
     )
     password: str = field(
         default="",
         metadata={
-            "description": "登录密码",
-            "required": True,
+            "description": "登录密码（与 token 二选一）",
+            "required": False,
             "secret": True,
             "ui": {"widget": "password", "group": "basic", "order": 2},
+        },
+    )
+    token: str = field(
+        default="",
+        metadata={
+            "description": "直接登录 token（与邮箱密码二选一，配置后优先使用）",
+            "required": False,
+            "secret": True,
+            "ui": {"widget": "password", "group": "basic", "order": 3},
         },
     )
     platform: str = field(
@@ -52,7 +61,7 @@ class YunhuUserAccountConfig(BotAccountConfig):
             "ui": {
                 "widget": "select",
                 "group": "connection",
-                "order": 3,
+                "order": 4,
                 "options": [
                     {"label": "Windows", "value": "windows"},
                     {"label": "Mac", "value": "mac"},
@@ -68,7 +77,7 @@ class YunhuUserAccountConfig(BotAccountConfig):
         default="",
         metadata={
             "description": "设备ID（留空自动生成）",
-            "ui": {"widget": "text", "group": "connection", "order": 4},
+            "ui": {"widget": "text", "group": "connection", "order": 5},
         },
     )
 
@@ -97,7 +106,7 @@ class YunhuUserAdapter(sdk.BaseAdapter):
     """
     云湖用户账户驱动适配器
 
-    支持通过用户邮箱账户登录，使用 WebSocket 接收消息事件
+    支持通过邮箱密码或直接配置 token 登录用户账户，使用 WebSocket 接收消息事件
     """
 
     _platform = "yunhu_user"
@@ -307,6 +316,7 @@ class YunhuUserAdapter(sdk.BaseAdapter):
                     "default": {
                         "email": "your_email@example.com",
                         "password": "your_password",
+                        "token": "",
                         "platform": "windows",
                         "device_id": "",
                         "enabled": True,
@@ -325,11 +335,18 @@ class YunhuUserAdapter(sdk.BaseAdapter):
 
             email = account_data.get("email", "")
             password = account_data.get("password", "")
+            token = account_data.get("token", "")
 
             template_emails = {"your_email@example.com"}
             template_passwords = {"your_password"}
-            if email in template_emails and password in template_passwords:
+            if not token and email in template_emails and password in template_passwords:
                 self.logger.warning(f"跳过模板账户: {name}，请修改配置")
+                continue
+
+            if not token and (not email or not password):
+                self.logger.warning(
+                    f"跳过账户: {name}，token 与邮箱密码均未完整配置（二选一）"
+                )
                 continue
 
             instance = dict_to_dataclass(YunhuUserAccountConfig, account_data)
@@ -342,36 +359,42 @@ class YunhuUserAdapter(sdk.BaseAdapter):
     async def _login_account(
         self, account_name: str, account_config: YunhuUserAccountConfig
     ) -> Optional[str]:
+        """登录账户：配置了 token 则直接使用（优先），否则邮箱登录换取 token"""
         http_client = None
         try:
-            self.logger.info(f"正在登录账户: {account_name} ({account_config.email})")
+            if account_config.token:
+                self.logger.info(f"正在使用 token 登录账户: {account_name}")
+                http_client = YunhuHTTPClient(token=account_config.token)
+            else:
+                self.logger.info(f"正在登录账户: {account_name} ({account_config.email})")
 
-            http_client = YunhuHTTPClient()
+                http_client = YunhuHTTPClient()
 
-            login_response = await http_client.email_login(
-                email=account_config.email,
-                password=account_config.password,
-                device_id=account_config.device_id or uuid.uuid4().hex,
-                platform=account_config.platform,
-            )
-
-            self.logger.debug(f"登录响应: {login_response}")
-
-            if not login_response or login_response.get("code") != 1:
-                error_msg = (
-                    login_response.get("msg", "登录失败")
-                    if login_response
-                    else "登录失败"
+                login_response = await http_client.email_login(
+                    email=account_config.email,
+                    password=account_config.password,
+                    device_id=account_config.device_id or uuid.uuid4().hex,
+                    platform=account_config.platform,
                 )
-                self.logger.error(f"账户 {account_name} 登录失败: {error_msg}")
-                return None
 
-            token = login_response.get("data", {}).get("token", "")
-            if not token:
-                self.logger.error(f"账户 {account_name} 未获取到 token")
-                return None
+                self.logger.debug(f"登录响应: {login_response}")
 
-            http_client.set_token(token)
+                if not login_response or login_response.get("code") != 1:
+                    error_msg = (
+                        login_response.get("msg", "登录失败")
+                        if login_response
+                        else "登录失败"
+                    )
+                    self.logger.error(f"账户 {account_name} 登录失败: {error_msg}")
+                    return None
+
+                token = login_response.get("data", {}).get("token", "")
+                if not token:
+                    self.logger.error(f"账户 {account_name} 未获取到 token")
+                    return None
+
+                http_client.set_token(token)
+
             user_info_response = await http_client.get_user_info()
 
             self.logger.debug(f"用户信息响应: {user_info_response}")
@@ -380,7 +403,8 @@ class YunhuUserAdapter(sdk.BaseAdapter):
             user_id = data.id if data else ""
 
             if not user_id:
-                self.logger.error(f"账户 {account_name} 获取用户信息失败")
+                hint = "，token 可能无效" if account_config.token else ""
+                self.logger.error(f"账户 {account_name} 获取用户信息失败{hint}")
                 return None
 
             self.logger.info(f"账户 {account_name} 登录成功，用户ID: {user_id}")

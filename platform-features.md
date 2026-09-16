@@ -452,8 +452,10 @@ ws_reconnect_interval = 30  # WebSocket重连间隔（秒）
 ws_timeout = 70             # WebSocket超时时间（秒）
 
 [YunhuUserAdapter.accounts.default]
-email = "user1@example.com"  # 用户邮箱（必填）
-password = "password1"       # 用户密码（必填）
+# 登录方式二选一：直接填 token，或填邮箱+密码（两者同时配置时优先使用 token）
+email = "user1@example.com"  # 用户邮箱（与 token 二选一）
+password = "password1"       # 用户密码（与 token 二选一）
+token = ""                   # 直接登录 token（与邮箱密码二选一，配置后优先使用）
 platform = "windows"         # 登录平台（可选，默认windows）
 device_id = ""               # 设备ID（可选，不填自动生成）
 enabled = true               # 是否启用（可选，默认为true）
@@ -467,8 +469,9 @@ enabled = true
 ```
 
 **配置项说明：**
-- `email`：用户邮箱（必填），用于登录云湖平台
-- `password`：用户密码（必填）
+- `email`：用户邮箱（与 token 二选一），用于登录云湖平台
+- `password`：用户密码（与 token 二选一）
+- `token`：直接登录 token（与邮箱密码二选一，配置后优先使用），可从网页版抓包请求头中获取；token 使用中会自动刷新
 - `platform`：登录平台标识（可选，默认为 `windows`），可选值：`windows`、`macos`、`linux`、`ios`、`android`
 - `device_id`：设备ID（可选，不填自动生成），建议填写固定值以保持会话一致性
 - `enabled`：是否启用该账户（可选，默认为 `true`）
@@ -478,10 +481,11 @@ enabled = true
 - `ws_timeout`：WebSocket 超时时间（秒，默认 70）
 
 **重要提示：**
-1. 适配器使用邮箱登录方式获取 token，登录后通过 WebSocket 接收事件
-2. WebSocket 连接断开后会自动重连，最多重试 3 次
-3. 建议为每个账户设置固定的 `device_id`，以保持会话一致性
-4. 未修改的模板账户（默认邮箱和密码）会被自动跳过
+1. 支持两种登录方式：邮箱密码登录（换取 token）或直接配置 token 登录，二选一；同时配置时优先使用 token
+2. token 登录失败即视为配置错误（token 无效），请检查后重新配置
+3. WebSocket 连接断开后会自动重连，最多重试 3 次
+4. 建议为每个账户设置固定的 `device_id`，以保持会话一致性
+5. 未修改的模板账户（默认邮箱和密码且未配置 token）会被自动跳过
 
 ### 使用Send DSL指定账户
 
