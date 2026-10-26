@@ -388,7 +388,10 @@ class YunhuUserConverter(BaseConverter):
             elif seg_type == "file":
                 texts.append(f"[文件: {data.get('file_name', '')}]")
             elif seg_type == "mention":
-                texts.append(f"@{data.get('user_id', '')}")
+                # user_id 缺失时省略该段，不输出空 "@"；join(" ") 已加分隔，不再补尾随空格
+                user_id = str(data.get("user_id") or "").strip()
+                if user_id:
+                    texts.append(f"@{user_id}")
             elif seg_type == "a2ui":
                 texts.append("[A2UI]")
         
