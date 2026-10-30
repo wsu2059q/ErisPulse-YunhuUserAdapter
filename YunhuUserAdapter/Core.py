@@ -18,7 +18,7 @@ try:
 except ImportError:  # pragma: no cover
     spawn_background = None
 
-__version__ = "4.4.1"
+__version__ = "4.5.0"
 
 # 软依赖的框架最低版本（运行时检测，仅提示不强制）
 MIN_FRAMEWORK_VERSION = (2, 7, 1)
@@ -33,7 +33,12 @@ class YunhuUserAccountConfig(BotAccountConfig):
         metadata={
             "description": "登录邮箱（与 token 二选一）",
             "required": False,
-            "ui": {"widget": "text", "group": "basic", "order": 1},
+            "ui": {
+                "widget": "text",
+                "group": "basic",
+                "order": 1,
+                "disabled_if": {"field": "token", "op": "truthy"},
+            },
         },
     )
     password: str = field(
@@ -42,7 +47,12 @@ class YunhuUserAccountConfig(BotAccountConfig):
             "description": "登录密码（与 token 二选一）",
             "required": False,
             "secret": True,
-            "ui": {"widget": "password", "group": "basic", "order": 2},
+            "ui": {
+                "widget": "password",
+                "group": "basic",
+                "order": 2,
+                "disabled_if": {"field": "token", "op": "truthy"},
+            },
         },
     )
     token: str = field(
