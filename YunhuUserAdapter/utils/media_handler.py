@@ -1,6 +1,8 @@
 from typing import Union, Optional, Dict
+import base64
 import hashlib
 import io
+import re
 
 
 class MediaHandler:
@@ -58,18 +60,25 @@ class MediaHandler:
             elif isinstance(file, str):
                 try:
                     import os
+                    if file.startswith("file://"):
+                        file = file[len("file://"):]
+                    elif file.startswith("file:"):
+                        file = file[len("file:"):]
                     if os.path.isfile(file):
                         # 从路径中提取文件名
                         if not filename:
                             filename = os.path.basename(file)
-                        
+
                         # 读取文件内容
                         with open(file, "rb") as f:
                             file_data = f.read()
                         self.logger.debug(f"成功读取本地文件: {file}, 大小: {len(file_data)} 字节")
                     else:
-                        self.logger.error(f"文件不存在或不是有效路径: {file}")
-                        return None
+                        file_data = self._decode_inline_media(file)
+                        if file_data is None:
+                            self.logger.error(f"文件不存在或不是有效路径: {file}")
+                            return None
+                        self.logger.debug(f"已解码内联媒体数据: {len(file_data)} 字节")
                 except Exception as e:
                     self.logger.error(f"读取本地文件失败: {file}, 错误: {e}")
                     return None
@@ -129,6 +138,29 @@ class MediaHandler:
             self.logger.debug(traceback.format_exc())
             return None
     
+    @staticmethod
+    def _decode_inline_media(value: str) -> Optional[bytes]:
+        """解码 data: URI 或裸 base64 字符串为 bytes，非该形态返回 None"""
+        if value.startswith("data:"):
+            header, _, payload = value.partition(",")
+            try:
+                if "base64" in header:
+                    return base64.b64decode(payload)
+                import urllib.parse
+                return urllib.parse.unquote(payload).encode("utf-8")
+            except Exception:
+                return None
+        if (
+            len(value) >= 256
+            and len(value) % 4 == 0
+            and bool(re.fullmatch(r"[A-Za-z0-9+/]+={0,2}", value))
+        ):
+            try:
+                return base64.b64decode(value, validate=True)
+            except Exception:
+                return None
+        return None
+
     async def get_audio_duration(self, file_data: bytes) -> int:
         """
         获取音频时长（秒）

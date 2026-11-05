@@ -87,6 +87,7 @@ class Send(BaseAdapter.Send):
 
     def _reset_modifiers(self):
         self._buttons = None
+        self._at_all = False
 
     def _resolve_http_client(self):
         account_name = self._adapter._resolve_to_account_name(self._account_id)
@@ -187,10 +188,13 @@ class Send(BaseAdapter.Send):
         msg_type: int,
         extra_content: Optional[Dict] = None,
         buttons: Optional[List] = None,
+        filename: Optional[str] = None,
     ) -> Dict[str, Any]:
         try:
             media_handler = self._get_media_handler()
-            process_result = await media_handler.process_file(file, file_type)
+            process_result = await media_handler.process_file(
+                file, file_type, filename=filename
+            )
 
             if not process_result:
                 return ResponseFormatter.failed(10003, "文件处理失败")
@@ -384,7 +388,7 @@ class Send(BaseAdapter.Send):
 
         return asyncio.create_task(_recall())
 
-    def Raw_ob12(self, message: Union[List, Dict]) -> asyncio.Task:
+    def Raw_ob12(self, message: Union[List, Dict], **kwargs) -> asyncio.Task:
         if isinstance(message, dict):
             message = [message]
 
@@ -405,12 +409,20 @@ class Send(BaseAdapter.Send):
         grouped_messages = self._group_ob12_messages(message)
 
         async def _send_grouped_messages():
+            if self._at_all:
+                self._adapter.logger.warning(
+                    "云湖用户协议不支持 @全体成员，已忽略 AtAll 修饰"
+                )
+                self._at_all = False
             results = []
             for msg_group in grouped_messages:
                 result = await self._send_ob12_group(msg_group)
-                results.append(result)
+                if result is not None:
+                    results.append(result)
             self._reset_modifiers()
-            return results[-1] if results else None
+            if not results:
+                return ResponseFormatter.failed(10002, "没有可发送的消息内容")
+            return results[-1]
 
         return asyncio.create_task(_send_grouped_messages())
 
@@ -515,7 +527,12 @@ class Send(BaseAdapter.Send):
                 file_name = seg_data.get("file_name", "")
                 extra_content = {"file_name": file_name} if file_name else {}
                 return await self._send_media(
-                    file_url, "file", MessageTypes.FILE, extra_content, final_buttons
+                    file_url,
+                    "file",
+                    MessageTypes.FILE,
+                    extra_content,
+                    final_buttons,
+                    filename=file_name or None,
                 )
 
             elif seg_type == "markdown":
@@ -543,15 +560,19 @@ class Send(BaseAdapter.Send):
             elif seg_type == "reply":
                 return await self._send_text_like("", MessageTypes.TEXT, final_buttons)
 
-            elif seg_type.startswith("yunhu_"):
-                return await self._send_text_like(
-                    str(seg_data), MessageTypes.TEXT, final_buttons
+            elif seg_type == "mention_all":
+                self._adapter.logger.warning(
+                    "云湖用户协议不支持 @全体成员，已忽略 mention_all 段"
                 )
+                return None
+
+            elif seg_type.startswith("yunhu_"):
+                self._adapter.logger.warning(f"忽略不支持的消息段: {seg_type}")
+                return None
 
             else:
-                return await self._send_text_like(
-                    str(seg_data), MessageTypes.TEXT, final_buttons
-                )
+                self._adapter.logger.warning(f"忽略不支持的消息段: {seg_type}")
+                return None
         finally:
             self._reply_message_id = old_reply_id
             self._buttons = old_buttons
